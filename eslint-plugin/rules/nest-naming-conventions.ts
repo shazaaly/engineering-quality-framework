@@ -1,8 +1,40 @@
 /**
  * Why: NestJS architecture becomes inconsistent without naming contracts.
- * How: This rule will map decorators to expected class suffixes (Controller/Service/Dto).
+ * How: This rule maps class decorators to expected suffixes and validates DTO naming.
  * Example: `@Controller() export class UserHandler` should be `UsersController`.
  */
+import { isIdentifier } from "./shared";
+
+const DECORATOR_TO_SUFFIX: Record<string, string> = {
+  Controller: "Controller",
+  Injectable: "Service",
+};
+
+const isNode = (value: unknown): value is { type: string; [key: string]: unknown } => {
+  return typeof value === "object" && value !== null && "type" in value;
+};
+
+const getDecoratorName = (decorator: unknown): string | null => {
+  if (!isNode(decorator) || !isNode(decorator.expression)) {
+    return null;
+  }
+
+  // @Controller() -> CallExpression callee Identifier("Controller")
+  if (decorator.expression.type === "CallExpression" && isNode(decorator.expression.callee)) {
+    const callee = decorator.expression.callee;
+    if (callee.type === "Identifier" && typeof callee.name === "string") {
+      return callee.name;
+    }
+  }
+
+  // @Injectable -> Identifier("Injectable")
+  if (decorator.expression.type === "Identifier" && typeof decorator.expression.name === "string") {
+    return decorator.expression.name;
+  }
+
+  return null;
+};
+
 const rule = {
   meta: {
     type: "problem",
@@ -12,11 +44,60 @@ const rule = {
     schema: [],
     messages: {
       invalidClassName:
-        "Class '{{name}}' does not follow Nest naming convention for its role.",
+        "Class '{{name}}' must end with '{{expectedSuffix}}' for @{{decorator}}.",
+      invalidDtoName: "DTO class '{{name}}' must end with 'Dto'.",
     },
   },
-  create() {
-    return {};
+  create(context: {
+    filename?: string;
+    getFilename?: () => string;
+    report: (descriptor: {
+      node: unknown;
+      messageId: "invalidClassName" | "invalidDtoName";
+      data: { name: string; expectedSuffix?: string; decorator?: string };
+    }) => void;
+  }) {
+    const fileName = context.filename ?? context.getFilename?.() ?? "";
+    const isDtoFile = /\/dto\/.*\.ts$/i.test(fileName) || /\.dto\.ts$/i.test(fileName);
+
+    return {
+      ClassDeclaration(node: { id?: unknown; decorators?: unknown[] }) {
+        if (!node.id || !isIdentifier(node.id)) {
+          return;
+        }
+
+        const className = node.id.name;
+        const decorators = node.decorators ?? [];
+
+        for (const decorator of decorators) {
+          const decoratorName = getDecoratorName(decorator);
+          if (!decoratorName) {
+            continue;
+          }
+
+          const expectedSuffix = DECORATOR_TO_SUFFIX[decoratorName];
+          if (!expectedSuffix) {
+            continue;
+          }
+
+          if (!className.endsWith(expectedSuffix)) {
+            context.report({
+              node: node.id,
+              messageId: "invalidClassName",
+              data: { name: className, expectedSuffix, decorator: decoratorName },
+            });
+          }
+        }
+
+        if (isDtoFile && !className.endsWith("Dto")) {
+          context.report({
+            node: node.id,
+            messageId: "invalidDtoName",
+            data: { name: className },
+          });
+        }
+      },
+    };
   },
 };
 

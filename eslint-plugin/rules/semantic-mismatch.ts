@@ -9,14 +9,90 @@ const READ_INTENT_PREFIXES = ["get", "find", "fetch", "read"];
 const CREATE_INTENT_PREFIXES = ["create", "add"];
 const VALIDATE_INTENT_PREFIXES = ["validate", "check"];
 
-const DESTRUCTIVE_OPERATION_PATTERN = /\.(delete|remove|drop|archive)\s*\(/i;
-const CREATE_OPERATION_PATTERN = /\.(create|save|insert)\s*\(/i;
-const BOOLEAN_RETURN_PATTERN = /return\s+(true|false|!![\w.()[\]]+)/i;
-const THROW_PATTERN = /\bthrow\b/i;
+const DESTRUCTIVE_OPERATIONS = new Set(["delete", "remove", "drop", "archive"]);
+const CREATE_OPERATIONS = new Set(["create", "save", "insert"]);
 
 const startsWithIntent = (name: string, intents: string[]): boolean => {
   const [firstToken] = splitNameIntoTokens(name);
   return firstToken ? intents.includes(firstToken) : false;
+};
+
+const isNode = (value: unknown): value is { type: string; [key: string]: unknown } => {
+  return typeof value === "object" && value !== null && "type" in value;
+};
+
+const isBooleanExpression = (node: { type: string; [key: string]: unknown }): boolean => {
+  if (node.type === "Literal" && typeof node.value === "boolean") {
+    return true;
+  }
+
+  if (node.type === "UnaryExpression" && (node.operator === "!" || node.operator === "!!")) {
+    return true;
+  }
+
+  return false;
+};
+
+const collectBehaviorFlags = (bodyNode: unknown): {
+  hasDestructiveCall: boolean;
+  hasCreateCall: boolean;
+  hasBooleanReturn: boolean;
+  hasThrow: boolean;
+} => {
+  const flags = {
+    hasDestructiveCall: false,
+    hasCreateCall: false,
+    hasBooleanReturn: false,
+    hasThrow: false,
+  };
+  const visited = new WeakSet<object>();
+
+  const visit = (node: unknown): void => {
+    if (!isNode(node)) {
+      return;
+    }
+    if (visited.has(node)) {
+      return;
+    }
+    visited.add(node);
+
+    if (node.type === "ThrowStatement") {
+      flags.hasThrow = true;
+    }
+
+    if (node.type === "ReturnStatement" && isNode(node.argument) && isBooleanExpression(node.argument)) {
+      flags.hasBooleanReturn = true;
+    }
+
+    if (node.type === "CallExpression" && isNode(node.callee)) {
+      const callee = node.callee;
+      if (callee.type === "MemberExpression" && isNode(callee.property) && callee.property.type === "Identifier") {
+        const operation = String(callee.property.name).toLowerCase();
+        if (DESTRUCTIVE_OPERATIONS.has(operation)) {
+          flags.hasDestructiveCall = true;
+        }
+        if (CREATE_OPERATIONS.has(operation)) {
+          flags.hasCreateCall = true;
+        }
+      }
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key === "parent" || key === "loc" || key === "range") {
+        continue;
+      }
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          visit(child);
+        }
+      } else {
+        visit(value);
+      }
+    }
+  };
+
+  visit(bodyNode);
+  return flags;
 };
 
 const rule = {
@@ -41,20 +117,18 @@ const rule = {
       messageId: "destructiveMismatch" | "missingCreateBehavior" | "invalidValidateBehavior";
       data: { name: string };
     }) => void;
-    sourceCode?: { getText: (node: unknown) => string };
-    getSourceCode?: () => { getText: (node: unknown) => string };
   }) {
-    const sourceCode = context.sourceCode ?? context.getSourceCode?.();
-    if (!sourceCode) {
-      return {};
-    }
-
     const reportSemanticMismatch = (
       node: unknown,
       name: string,
-      bodyText: string,
+      behavior: {
+        hasDestructiveCall: boolean;
+        hasCreateCall: boolean;
+        hasBooleanReturn: boolean;
+        hasThrow: boolean;
+      },
     ): void => {
-      if (startsWithIntent(name, READ_INTENT_PREFIXES) && DESTRUCTIVE_OPERATION_PATTERN.test(bodyText)) {
+      if (startsWithIntent(name, READ_INTENT_PREFIXES) && behavior.hasDestructiveCall) {
         context.report({
           node,
           messageId: "destructiveMismatch",
@@ -62,7 +136,7 @@ const rule = {
         });
       }
 
-      if (startsWithIntent(name, CREATE_INTENT_PREFIXES) && !CREATE_OPERATION_PATTERN.test(bodyText)) {
+      if (startsWithIntent(name, CREATE_INTENT_PREFIXES) && !behavior.hasCreateCall) {
         context.report({
           node,
           messageId: "missingCreateBehavior",
@@ -72,8 +146,8 @@ const rule = {
 
       if (
         startsWithIntent(name, VALIDATE_INTENT_PREFIXES) &&
-        !BOOLEAN_RETURN_PATTERN.test(bodyText) &&
-        !THROW_PATTERN.test(bodyText)
+        !behavior.hasBooleanReturn &&
+        !behavior.hasThrow
       ) {
         context.report({
           node,
@@ -89,8 +163,8 @@ const rule = {
           return;
         }
 
-        const bodyText = sourceCode.getText(node.body);
-        reportSemanticMismatch(node.id, node.id.name, bodyText);
+        const behavior = collectBehaviorFlags(node.body);
+        reportSemanticMismatch(node.id, node.id.name, behavior);
       },
 
       MethodDefinition(node: { key: unknown; value?: { body?: unknown } }) {
@@ -98,8 +172,8 @@ const rule = {
           return;
         }
 
-        const bodyText = sourceCode.getText(node.value.body);
-        reportSemanticMismatch(node.key, node.key.name, bodyText);
+        const behavior = collectBehaviorFlags(node.value.body);
+        reportSemanticMismatch(node.key, node.key.name, behavior);
       },
     };
   },
