@@ -9,7 +9,8 @@
     "forceConsistentCasingInFileNames": true,
     "rootDir": ".",
     "ignoreDeprecations": "6.0",
-    "outDir": ".dist"
+    "outDir": ".dist",
+    "types": ["node"]
   },
   "include": ["eslint-plugin/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", ".dist", "test-repo/**"]

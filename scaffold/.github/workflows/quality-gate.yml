@@ -22,8 +22,5 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Lint quality rules
-        run: npx eslint --ext .ts .
-
-      - name: Semantic reviewer
-        run: npx ts-node scripts/check-semantic.ts
+      - name: Quality gates (lint + naming + tsdoc + semantic)
+        run: npm run demo:check

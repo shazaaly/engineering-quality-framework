@@ -1,6 +1,13 @@
 /**
- * Why: CI needs an explicit semantic check step beyond formatting and style.
- * How: This script will run repository-level semantic checks (later with ts-morph AST = Abstract Syntax Tree).
- * Example: Fails CI when `get*` methods call `delete/remove/drop`.
+ * Why: Some teams want a dedicated “semantic” step in CI for clarity—even when checks live in ESLint.
+ * How: This script delegates to the same command as `npm run check:semantic` / `lint:quality`.
+ * Example: `npx ts-node scripts/check-semantic.ts` (kept for backwards compatibility with older CI snippets).
  */
-console.log("Semantic check placeholder: implement ts-morph scan in next step.");
+import { spawnSync } from "child_process";
+
+const result = spawnSync("npm", ["run", "lint:quality"], {
+  stdio: "inherit",
+  shell: process.platform === "win32",
+});
+
+process.exit(result.status ?? 1);
