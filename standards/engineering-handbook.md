@@ -39,6 +39,29 @@ Use method names that reflect behavior:
 
 If a method name says `get`, it must not delete data.
 
+### 2.4 Semantic Reviewer Rule
+
+The semantic reviewer checks whether method names match method behavior.
+It does not need to be perfect; it is a risk-reducing safeguard.
+
+Core checks:
+
+- Extract method name
+- Analyze called operations in method body
+- Compare expected intent vs observed behavior
+- Report mismatch in CI with a fix suggestion
+
+Example mismatch:
+
+- Method: `processUser`
+- Behavior: calls delete/remove/archive operations
+- CI message: `"Function name does not reflect destructive behavior. Consider rename to deleteUser/archiveUser or split logic."`
+
+Severity:
+
+- Error: destructive mismatch (blocks merge)
+- Warning: ambiguous names like `process/handle/do` (advisory)
+
 ### 2.3 Variables
 
 - Prefer descriptive names over short names.
@@ -113,7 +136,22 @@ A change is done only when:
 
 - Lint passes
 - Naming rules pass
+- Semantic reviewer passes (no error-level mismatch)
 - TSDoc rules pass
 - Tests pass (minimum coverage target met)
 - CI passes
 - Docs are generated successfully
+
+---
+
+## 7) Demo Scope (2-Day)
+
+For the demo, only high-impact rules are enforced as blockers:
+
+1. NestJS naming conventions
+2. Generic name ban
+3. TSDoc on public methods
+4. Semantic mismatch error detection
+5. Test and CI pass requirement
+
+Warning-level semantic findings are shown but do not block merge.

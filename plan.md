@@ -85,6 +85,35 @@ It reads decorators to understand what a class IS:
 
 ts-morph reads the AST + decorators → the rules use that context.
 
+## Semantic Reviewer (Rule-Based Now, AI-Ready Later)
+
+This is the risk-reducing layer that compares function intent vs behavior.
+
+Flow:
+
+1. Extract function/method name
+2. Analyze function body operations
+3. Compare intent vs behavior
+4. Flag mismatch with actionable CI feedback
+
+Example:
+
+- Function name: `processUser`
+- Actual behavior: deletes user records
+- CI comment: `"Function name does not reflect destructive behavior. Consider rename to deleteUser/archiveUser or split logic."`
+
+Initial deterministic rules for the demo:
+
+- `get/find/fetch*` must not call destructive ops (`delete/remove/drop/archive`)
+- `create/add*` should include create ops (`create/save/insert`)
+- `validate/check*` should return boolean or throw
+- ambiguous names like `process/handle/do` produce warning-level feedback
+
+Severity policy:
+
+- Error: destructive mismatch (blocks CI)
+- Warning: ambiguous naming (advisory in CI)
+
 ---
 
 ## Day 1: ESLint Plugin + Standards
@@ -131,6 +160,7 @@ One-page rules doc. Covers:
 - If method name starts with `get/find/fetch` → body must NOT call `.delete()`, `.remove()`, `.drop()`
 - If method name starts with `create/add` → body should contain a `.save()`, `.create()`, `.insert()` call
 - If method name starts with `validate/check` → should return boolean or throw
+- If method name is `process/handle/do*` → warn unless contextual noun clarifies intent
 - Error: `"Method 'getUser' calls 'this.repo.delete()' — name suggests read, body suggests delete."`
 
 **6. Scaffold: husky + lint-staged**
@@ -153,7 +183,7 @@ Triggers on PR. Steps:
 
 1. Checkout + install
 2. ESLint with quality plugin (`eslint --ext .ts src/`)
-3. Semantic check pass
+3. Semantic reviewer pass (errors fail CI, warnings reported)
 4. Jest tests + coverage (`--coverage --coverageThreshold='{"global":{"lines":60}}'`)
 5. Generate docs with Compodoc
 6. Upload docs as artifact
