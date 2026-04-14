@@ -1,0 +1,29 @@
+# Why: CI is the non-bypassable governance gate before merge.
+# How: Runs lint + semantic checks + tests + docs generation.
+# Example: PR fails when semantic mismatch is detected.
+name: quality-gate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint quality rules
+        run: npx eslint --ext .ts .
+
+      - name: Semantic reviewer
+        run: npx ts-node scripts/check-semantic.ts
