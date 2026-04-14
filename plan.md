@@ -222,6 +222,27 @@ Triggers on PR. Steps:
 7. "Fix everything → CI passes → docs auto-generated"
 8. Close: "Standards enforced automatically. Zero human overhead."
 
+### Semantic Reviewer Demo Segment (add this live)
+
+Use this exact mini-flow during step 6:
+
+1. Open `users.service.ts` and show:
+   - method name: `processUser`
+   - body action: `this.userRepo.delete(...)`
+2. Trigger checks (commit or CI run).
+3. Show CI feedback:
+   - `"Function name does not reflect destructive behavior. Consider rename to deleteUser/archiveUser or split logic."`
+4. Apply fix live:
+   - rename `processUser` -> `deleteUser`
+   - or split into `getUser` + `deleteUser`
+5. Re-run checks and show pass.
+
+Why this lands with founders:
+
+- It proves the system catches business-risk behavior, not only style.
+- It demonstrates explainable enforcement (clear, actionable message).
+- It shows low-friction adoption: fix is immediate and measurable.
+
 ---
 
 ## What's CUT (not in 2-day demo)
