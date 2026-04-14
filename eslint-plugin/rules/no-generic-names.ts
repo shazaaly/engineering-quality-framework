@@ -3,6 +3,8 @@
  * How: This rule flags generic identifiers and weak function/method verbs.
  * Example: `const data = ...` should become `const userPayload = ...`.
  */
+import { isIdentifier, splitNameIntoTokens } from "./shared";
+
 const FORBIDDEN_NAMES = new Set([
   "data",
   "temp",
@@ -19,26 +21,6 @@ const FORBIDDEN_NAMES = new Set([
 ]);
 
 const WEAK_VERBS = new Set(["do", "handle", "process", "run", "manage"]);
-
-const splitNameIntoTokens = (rawName: string): string[] => {
-  return rawName
-    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-    .replace(/[-\s]/g, "_")
-    .split("_")
-    .map((token) => token.toLowerCase())
-    .filter(Boolean);
-};
-
-const isIdentifier = (node: unknown): node is { type: "Identifier"; name: string } => {
-  return (
-    typeof node === "object" &&
-    node !== null &&
-    "type" in node &&
-    "name" in node &&
-    (node as { type: string }).type === "Identifier" &&
-    typeof (node as { name: string }).name === "string"
-  );
-};
 
 const isGenericName = (name: string): boolean => FORBIDDEN_NAMES.has(name.toLowerCase());
 

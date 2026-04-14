@@ -7,12 +7,18 @@ import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class OrdersService {
+  private readonly orderRepo = {
+    create(orderId: string) {
+      return { id: orderId, status: "created" };
+    },
+  };
+
   /**
    * Create a lightweight order record.
    * @param id order id.
    * @returns order status.
    */
   createOrder(id: string) {
-    return { id, status: "created" };
+    return this.orderRepo.create(id);
   }
 }

@@ -8,7 +8,7 @@ const recommended = {
     "engineering-quality-framework/no-generic-names": "error",
     "engineering-quality-framework/nest-naming-conventions": "error",
     "engineering-quality-framework/require-tsdoc": "error",
-    "engineering-quality-framework/semantic-mismatch": "warn",
+    "engineering-quality-framework/semantic-mismatch": "error",
   },
 };
 

@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "rootDir": ".",
+    "ignoreDeprecations": "6.0",
     "outDir": ".dist"
   },
   "include": ["eslint-plugin/**/*.ts", "scripts/**/*.ts", "test-repo/**/*.ts"],
