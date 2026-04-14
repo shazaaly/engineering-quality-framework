@@ -2,7 +2,7 @@
  * Why: Definition of Done requires docs generation after quality passes (engineering-handbook §6).
  * How: Compodoc from test-repo (TSDoc §4) + copy policy handbook next to output for one artifact.
  */
-import { mkdir, copyFile } from "node:fs/promises";
+import { mkdir, copyFile, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -35,4 +35,28 @@ await copyFile(
   join(root, "docs", "engineering-handbook.md"),
 );
 
-console.log("Docs written to docs/api; handbook copied to docs/engineering-handbook.md");
+const indexHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Engineering Quality — Documentation</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    a { color: #0969da; }
+    ul { padding-left: 1.25rem; }
+  </style>
+</head>
+<body>
+  <h1>Governed Nest documentation</h1>
+  <p>Generated from <code>test-repo</code> (Compodoc) plus the policy handbook.</p>
+  <ul>
+    <li><a href="./api/index.html">API documentation (Compodoc)</a></li>
+    <li><a href="./engineering-handbook.md">Engineering handbook (Markdown)</a></li>
+  </ul>
+</body>
+</html>
+`;
+await writeFile(join(root, "docs", "index.html"), indexHtml, "utf8");
+
+console.log("Docs written to docs/api; handbook copied; docs/index.html landing page added.");
