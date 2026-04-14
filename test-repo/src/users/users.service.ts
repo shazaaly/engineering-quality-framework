@@ -1,7 +1,7 @@
 /**
  * Why: Service contains business logic where semantic mismatches are risky.
- * How: This file intentionally includes one semantic mismatch for demo visibility.
- * Example: `getUser` triggers delete behavior and should fail quality checks.
+ * How: This file keeps clear intent naming with one read and one destructive method.
+ * Example: `getUser` reads user data, `deleteUser` performs delete behavior.
  */
 import { Injectable } from "@nestjs/common";
 
@@ -13,6 +13,15 @@ export class UsersService {
    * @returns user details.
    */
   getUser(id: string) {
+    return this.userRepo.find(id);
+  }
+
+  /**
+   * Delete user details by id.
+   * @param id target user id.
+   * @returns deletion status.
+   */
+  deleteUser(id: string) {
     return this.userRepo.delete(id);
   }
 
