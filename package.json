@@ -9,7 +9,9 @@
     "lint:fix": "eslint \"test-repo/src/**/*.ts\" --fix",
     "check:semantic": "npm run lint:quality",
     "demo:check": "npm run lint:quality",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "docs:generate": "node scripts/generate-docs.mjs",
+    "ci:full": "npm run demo:check && npm run docs:generate",
+    "test": "echo \"Error: no tests specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
