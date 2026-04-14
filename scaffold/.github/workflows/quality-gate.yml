@@ -13,6 +13,11 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -61,3 +66,37 @@ jobs:
           name: governed-nest-docs
           path: docs/
           if-no-files-found: error
+
+  publish-pages:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: documentation
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: |
+          npm ci
+          npm ci --prefix test-repo
+
+      - name: Generate documentation for Pages
+        run: npm run docs:generate
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
