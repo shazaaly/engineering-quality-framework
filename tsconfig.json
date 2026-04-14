@@ -11,6 +11,6 @@
     "ignoreDeprecations": "6.0",
     "outDir": ".dist"
   },
-  "include": ["eslint-plugin/**/*.ts", "scripts/**/*.ts", "test-repo/**/*.ts"],
-  "exclude": ["node_modules", ".dist"]
+  "include": ["eslint-plugin/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", ".dist", "test-repo/**"]
 }

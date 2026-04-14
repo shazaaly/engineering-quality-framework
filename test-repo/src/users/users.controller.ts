@@ -10,6 +10,11 @@ import { UsersService } from "./users.service";
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  /**
+   * Fetch user by id (HTTP handler).
+   * @param id User id from route.
+   * @returns User payload from service.
+   */
   @Get(":id")
   getUser(@Param("id") id: string) {
     return this.usersService.getUser(id);

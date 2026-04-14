@@ -3,36 +3,11 @@
  * How: This rule maps class decorators to expected suffixes and validates DTO naming.
  * Example: `@Controller() export class UserHandler` should be `UsersController`.
  */
-import { isIdentifier } from "./shared";
+import { getDecoratorName, isIdentifier } from "./shared";
 
 const DECORATOR_TO_SUFFIX: Record<string, string> = {
   Controller: "Controller",
   Injectable: "Service",
-};
-
-const isNode = (value: unknown): value is { type: string; [key: string]: unknown } => {
-  return typeof value === "object" && value !== null && "type" in value;
-};
-
-const getDecoratorName = (decorator: unknown): string | null => {
-  if (!isNode(decorator) || !isNode(decorator.expression)) {
-    return null;
-  }
-
-  // @Controller() -> CallExpression callee Identifier("Controller")
-  if (decorator.expression.type === "CallExpression" && isNode(decorator.expression.callee)) {
-    const callee = decorator.expression.callee;
-    if (callee.type === "Identifier" && typeof callee.name === "string") {
-      return callee.name;
-    }
-  }
-
-  // @Injectable -> Identifier("Injectable")
-  if (decorator.expression.type === "Identifier" && typeof decorator.expression.name === "string") {
-    return decorator.expression.name;
-  }
-
-  return null;
 };
 
 const rule = {

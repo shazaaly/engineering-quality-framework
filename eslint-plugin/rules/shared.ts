@@ -22,3 +22,29 @@ export const isIdentifier = (node: unknown): node is { type: "Identifier"; name:
     typeof (node as { name: string }).name === "string"
   );
 };
+
+export const isAstNode = (value: unknown): value is { type: string; [key: string]: unknown } => {
+  return typeof value === "object" && value !== null && "type" in value;
+};
+
+/**
+ * Reads Nest/class decorator name from ESTree decorator node (@Controller(), @Injectable).
+ */
+export const getDecoratorName = (decorator: unknown): string | null => {
+  if (!isAstNode(decorator) || !isAstNode(decorator.expression)) {
+    return null;
+  }
+
+  if (decorator.expression.type === "CallExpression" && isAstNode(decorator.expression.callee)) {
+    const callee = decorator.expression.callee;
+    if (callee.type === "Identifier" && typeof callee.name === "string") {
+      return callee.name;
+    }
+  }
+
+  if (decorator.expression.type === "Identifier" && typeof decorator.expression.name === "string") {
+    return decorator.expression.name;
+  }
+
+  return null;
+};
