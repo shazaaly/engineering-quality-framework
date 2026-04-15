@@ -6,6 +6,7 @@ import { mkdir, copyFile, writeFile, readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { marked } from "marked";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(root, "docs", "api");
@@ -36,6 +37,7 @@ await copyFile(
 );
 
 const handbookMarkdown = await readFile(join(root, "standards", "engineering-handbook.md"), "utf8");
+const handbookBodyHtml = marked.parse(handbookMarkdown);
 const handbookHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,7 +46,7 @@ const handbookHtml = `<!DOCTYPE html>
   <title>Engineering Handbook</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 56rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
-    pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code, pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     pre { background: #f6f8fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto; }
     h1, h2, h3 { line-height: 1.25; }
     hr { border: 0; border-top: 1px solid #d0d7de; margin: 1.5rem 0; }
@@ -54,10 +56,7 @@ const handbookHtml = `<!DOCTYPE html>
 </head>
 <body>
   <p><a href="./index.html">Back to docs index</a></p>
-  <pre>${handbookMarkdown
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")}</pre>
+  ${handbookBodyHtml}
 </body>
 </html>
 `;
