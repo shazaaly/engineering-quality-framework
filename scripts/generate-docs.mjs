@@ -18,7 +18,7 @@ const compodoc = spawnSync(
   [
     "compodoc",
     "-p",
-    join(root, "test-repo", "tsconfig.json"),
+    join(root, "test-repo", "tsconfig.docs.json"),
     "-d",
     outDir,
     "--silent",

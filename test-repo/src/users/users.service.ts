@@ -4,6 +4,7 @@
  * Example: `getUser` reads user data, `deleteUser` performs delete behavior.
  */
 import { Injectable } from "@nestjs/common";
+import { CreateUserDto } from "./dto/create-user.dto";
 
 @Injectable()
 export class UsersService {
@@ -26,6 +27,15 @@ export class UsersService {
   }
 
   private userRepo = {
+    create(input: CreateUserDto) {
+      return { id: "user-created", ...input, active: true };
+    },
+    listActive() {
+      return [
+        { id: "user-1", email: "a@example.com", active: true },
+        { id: "user-2", email: "b@example.com", active: true },
+      ];
+    },
     delete(targetId: string) {
       return { id: targetId, deleted: true };
     },
@@ -43,29 +53,30 @@ export class UsersService {
     return this.userRepo.find(id);
   }
 
-  // Intentionally bad demo case: weak verb + missing TSDoc.
-  process() {
-    return this.userRepo.find("demo-user-id");
+  /**
+   * Create user profile from request payload.
+   * @param input user creation payload.
+   * @returns created user profile.
+   */
+  createUserProfile(input: CreateUserDto) {
+    return this.userRepo.create(input);
   }
 
-  // Intentionally bad demo case: read-intent name with destructive behavior.
-  getAccountAndDelete(id: string) {
-    return this.userRepo.delete(id);
+  /**
+   * List active users for dashboard summary.
+   * @returns array of active users.
+   */
+  getActiveUsers() {
+    return this.userRepo.listActive();
   }
 
-  // Intentionally bad demo case: create-intent name without create operation.
-  createUserRecord(id: string) {
-    return this.userRepo.find(id);
+  /**
+   * Validate if provided email format is acceptable.
+   * @param email user email input.
+   * @returns true when email is valid.
+   */
+  validateUserEmail(email: string) {
+    return email.includes("@") && email.includes(".");
   }
 
-  // Intentionally bad demo case: validate-intent name but returns non-boolean value.
-  validateUserPayload(payload: string) {
-    return payload;
-  }
-
-  // Intentionally bad demo case: generic parameter/variable names.
-  setTempData(data: string) {
-    const result = data.trim();
-    return result;
-  }
 }

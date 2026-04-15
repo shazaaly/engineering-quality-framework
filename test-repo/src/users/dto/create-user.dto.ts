@@ -4,5 +4,7 @@
  * Example: `CreateUserDto`.
  */
 export class CreateUserDto {
+  fullName!: string;
   email!: string;
+  role!: "admin" | "member";
 }
