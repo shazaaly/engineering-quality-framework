@@ -259,8 +259,9 @@ const rule = {
     schema: [],
     messages: {
       missingTsdoc:
-        "Public method '{{name}}' must have a TSDoc block above it with exact @param names and @returns (run ESLint with --fix to insert a template).",
-      incompleteTsdoc: "Public method '{{name}}' TSDoc is incomplete: {{detail}}.",
+        "Why: '{{name}}' is part of public API and needs documentation for maintainability. How to fix: run ESLint with --fix to insert a template, then fill summary, exact @param tags, and @returns.",
+      incompleteTsdoc:
+        "Why: '{{name}}' documentation is incomplete ({{detail}}). How to fix: update summary and tags to match method parameters and behavior.",
     },
   },
   create(context: {

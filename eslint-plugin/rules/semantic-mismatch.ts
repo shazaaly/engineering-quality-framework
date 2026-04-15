@@ -35,12 +35,14 @@ const isBooleanExpression = (node: { type: string; [key: string]: unknown }): bo
 
 const collectBehaviorFlags = (bodyNode: unknown): {
   hasDestructiveCall: boolean;
+  destructiveOperation: string | null;
   hasCreateCall: boolean;
   hasBooleanReturn: boolean;
   hasThrow: boolean;
 } => {
   const flags = {
     hasDestructiveCall: false,
+    destructiveOperation: null as string | null,
     hasCreateCall: false,
     hasBooleanReturn: false,
     hasThrow: false,
@@ -70,6 +72,9 @@ const collectBehaviorFlags = (bodyNode: unknown): {
         const operation = String(callee.property.name).toLowerCase();
         if (DESTRUCTIVE_OPERATIONS.has(operation)) {
           flags.hasDestructiveCall = true;
+          if (!flags.destructiveOperation) {
+            flags.destructiveOperation = operation;
+          }
         }
         if (CREATE_OPERATIONS.has(operation)) {
           flags.hasCreateCall = true;
@@ -104,18 +109,18 @@ const rule = {
     schema: [],
     messages: {
       destructiveMismatch:
-        "Function '{{name}}' suggests read behavior but performs destructive operations. Rename or split logic.",
+        "Why: '{{name}}' suggests read-only behavior, but code calls '{{operation}}'. How to fix: rename to a destructive verb (e.g. delete/remove) or split read and write logic into separate methods.",
       missingCreateBehavior:
-        "Function '{{name}}' suggests create behavior but no create operation was detected.",
+        "Why: '{{name}}' suggests create behavior but no create/save/insert operation was detected. How to fix: call a create operation or rename method to match actual behavior.",
       invalidValidateBehavior:
-        "Function '{{name}}' suggests validation behavior but does not return boolean or throw.",
+        "Why: '{{name}}' implies validation, but it neither returns boolean nor throws on invalid input. How to fix: return true/false or throw a validation error.",
     },
   },
   create(context: {
     report: (descriptor: {
       node: unknown;
       messageId: "destructiveMismatch" | "missingCreateBehavior" | "invalidValidateBehavior";
-      data: { name: string };
+      data: { name: string; operation?: string };
     }) => void;
   }) {
     const reportSemanticMismatch = (
@@ -123,6 +128,7 @@ const rule = {
       name: string,
       behavior: {
         hasDestructiveCall: boolean;
+        destructiveOperation: string | null;
         hasCreateCall: boolean;
         hasBooleanReturn: boolean;
         hasThrow: boolean;
@@ -132,7 +138,7 @@ const rule = {
         context.report({
           node,
           messageId: "destructiveMismatch",
-          data: { name },
+          data: { name, operation: behavior.destructiveOperation ?? "delete/remove/drop/archive" },
         });
       }
 

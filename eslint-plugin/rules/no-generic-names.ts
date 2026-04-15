@@ -48,9 +48,9 @@ const rule = {
     schema: [],
     messages: {
       genericName:
-        "Avoid generic name '{{name}}'. Use a domain-specific name like 'userPayload' or 'orderSummary'.",
+        "Why: '{{name}}' is too generic and hides intent. How to fix: rename using domain context (e.g. userPayload, orderSummary, invoiceTotal).",
       weakMethodName:
-        "Method '{{name}}' starts with a weak verb. Prefer a specific action like 'deleteUser' or 'validateOrder'.",
+        "Why: '{{name}}' starts with a weak verb and does not teach behavior. How to fix: use an explicit action name (e.g. deleteUser, validateOrder, createInvoice).",
     },
   },
   create(context: {
