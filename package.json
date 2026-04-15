@@ -5,7 +5,6 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:quality": "eslint \"test-repo/src/**/*.ts\"",
-    "lint:demo": "npm run lint:quality",
     "lint:fix": "eslint \"test-repo/src/**/*.ts\" --fix",
     "check:semantic": "npm run lint:quality",
     "demo:check": "npm run lint:quality",
