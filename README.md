@@ -87,6 +87,25 @@ Jobs:
 
 This keeps governance non-bypassable in CI while producing downloadable docs for every successful run.
 
+## Documentation After Push to `main`
+
+After every successful push to `main`, the workflow generates and exports documentation automatically.
+
+What is generated:
+
+- `docs/api/` - Compodoc output from `test-repo`
+- `docs/engineering-handbook.md` - copied policy reference
+- `docs/index.html` - landing page linking both outputs
+
+Where to find it:
+
+1. GitHub repository -> **Actions**
+2. Open latest successful `quality-gate` run
+3. Open job `documentation`
+4. Download artifact: `governed-nest-docs`
+
+This gives a consistent, version-aligned documentation bundle for every successful CI run on `main`.
+
 ## Deployment (Netlify Option A)
 
 This repo is configured for Netlify native Git integration (no PAT required in GitHub Actions).
