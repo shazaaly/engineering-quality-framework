@@ -2,7 +2,7 @@
  * Why: Definition of Done requires docs generation after quality passes (engineering-handbook §6).
  * How: Compodoc from test-repo (TSDoc §4) + copy policy handbook next to output for one artifact.
  */
-import { mkdir, copyFile, writeFile } from "node:fs/promises";
+import { mkdir, copyFile, writeFile, readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -35,6 +35,34 @@ await copyFile(
   join(root, "docs", "engineering-handbook.md"),
 );
 
+const handbookMarkdown = await readFile(join(root, "standards", "engineering-handbook.md"), "utf8");
+const handbookHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Engineering Handbook</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 56rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+    pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    pre { background: #f6f8fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto; }
+    h1, h2, h3 { line-height: 1.25; }
+    hr { border: 0; border-top: 1px solid #d0d7de; margin: 1.5rem 0; }
+    ul, ol { padding-left: 1.25rem; }
+    a { color: #0969da; }
+  </style>
+</head>
+<body>
+  <p><a href="./index.html">Back to docs index</a></p>
+  <pre>${handbookMarkdown
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")}</pre>
+</body>
+</html>
+`;
+await writeFile(join(root, "docs", "engineering-handbook.html"), handbookHtml, "utf8");
+
 const indexHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -52,11 +80,11 @@ const indexHtml = `<!DOCTYPE html>
   <p>Generated from <code>test-repo</code> (Compodoc) plus the policy handbook.</p>
   <ul>
     <li><a href="./api/index.html">API documentation (Compodoc)</a></li>
-    <li><a href="./engineering-handbook.md">Engineering handbook (Markdown)</a></li>
+    <li><a href="./engineering-handbook.html">Engineering handbook</a></li>
   </ul>
 </body>
 </html>
 `;
 await writeFile(join(root, "docs", "index.html"), indexHtml, "utf8");
 
-console.log("Docs written to docs/api; handbook copied; docs/index.html landing page added.");
+console.log("Docs written to docs/api; handbook copied + rendered to HTML; docs/index.html landing page added.");
