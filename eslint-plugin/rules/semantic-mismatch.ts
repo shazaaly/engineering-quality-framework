@@ -5,44 +5,137 @@
  */
 import { isIdentifier, splitNameIntoTokens } from "./shared";
 
-const READ_INTENT_PREFIXES = ["get", "find", "fetch", "read"];
-const CREATE_INTENT_PREFIXES = ["create", "add"];
-const VALIDATE_INTENT_PREFIXES = ["validate", "check"];
-
-const DESTRUCTIVE_OPERATIONS = new Set(["delete", "remove", "drop", "archive"]);
-const CREATE_OPERATIONS = new Set(["create", "save", "insert"]);
-
-const startsWithIntent = (name: string, intents: string[]): boolean => {
-  const [firstToken] = splitNameIntoTokens(name);
-  return firstToken ? intents.includes(firstToken) : false;
-};
-
-const isNode = (value: unknown): value is { type: string; [key: string]: unknown } => {
-  return typeof value === "object" && value !== null && "type" in value;
-};
-
-const isBooleanExpression = (node: { type: string; [key: string]: unknown }): boolean => {
-  if (node.type === "Literal" && typeof node.value === "boolean") {
-    return true;
-  }
-
-  if (node.type === "UnaryExpression" && (node.operator === "!" || node.operator === "!!")) {
-    return true;
-  }
-
-  return false;
-};
-
-const collectBehaviorFlags = (bodyNode: unknown): {
+type AstNode = { type: string; [key: string]: unknown };
+type MessageId = "destructiveMismatch" | "missingCreateBehavior" | "invalidValidateBehavior";
+type BehaviorFlags = {
   hasDestructiveCall: boolean;
   destructiveOperation: string | null;
   hasCreateCall: boolean;
   hasBooleanReturn: boolean;
   hasThrow: boolean;
-} => {
-  const flags = {
+};
+
+const READ_INTENT_PREFIXES = ["get", "find", "fetch", "read"] as const;
+const CREATE_INTENT_PREFIXES = ["create", "add"] as const;
+const VALIDATE_INTENT_PREFIXES = ["validate", "check"] as const;
+
+const DESTRUCTIVE_OPERATIONS = new Set(["delete", "remove", "drop", "archive"]);
+const CREATE_OPERATIONS = new Set(["create", "save", "insert"]);
+const CREATE_METHOD_FIRST = new Set([...CREATE_OPERATIONS, ...CREATE_INTENT_PREFIXES]);
+const COMPARE_OPERATORS = new Set([
+  "==",
+  "!=",
+  "===",
+  "!==",
+  "<",
+  "<=",
+  ">",
+  ">=",
+  "in",
+  "instanceof",
+]);
+const BOOLEANISH_METHODS = new Set([
+  "includes",
+  "startsWith",
+  "endsWith",
+  "some",
+  "every",
+  "test",
+  "has",
+  "hasOwnProperty",
+]);
+const TRANSPARENT_EXPRESSIONS = new Set([
+  "ParenthesizedExpression",
+  "ChainExpression",
+  "TSAsExpression",
+  "TSNonNullExpression",
+]);
+const AST_KEYS_TO_SKIP = new Set(["parent", "loc", "range"]);
+
+const isNode = (value: unknown): value is AstNode => {
+  return typeof value === "object" && value !== null && "type" in value;
+};
+
+const getFirstNameToken = (name: string): string | null => {
+  const [firstToken] = splitNameIntoTokens(name);
+  return firstToken ?? null;
+};
+
+const startsWithIntent = (name: string, intents: readonly string[]): boolean => {
+  const firstToken = getFirstNameToken(name);
+  return Boolean(firstToken && intents.includes(firstToken));
+};
+
+const unwrapExpression = (node: unknown): AstNode | null => {
+  let current = node;
+  for (let i = 0; i < 6; i++) {
+    if (!isNode(current)) {
+      return null;
+    }
+    if (!TRANSPARENT_EXPRESSIONS.has(current.type)) {
+      return current;
+    }
+    current = current.expression;
+  }
+  return isNode(current) ? current : null;
+};
+
+const getMemberPropertyName = (callee: AstNode): string | null => {
+  const isMemberExpression =
+    callee.type === "MemberExpression" || callee.type === "OptionalMemberExpression";
+  if (!isMemberExpression || !isNode(callee.property) || callee.property.type !== "Identifier") {
+    return null;
+  }
+  return String(callee.property.name);
+};
+
+const isBooleanExpression = (node: AstNode): boolean => {
+  if (node.type === "Literal" && typeof node.value === "boolean") {
+    return true;
+  }
+  if (node.type === "UnaryExpression" && node.operator === "!") {
+    return true;
+  }
+  if (node.type === "BinaryExpression" && typeof node.operator === "string" && COMPARE_OPERATORS.has(node.operator)) {
+    return true;
+  }
+  if (node.type === "LogicalExpression" && (node.operator === "&&" || node.operator === "||")) {
+    return (
+      isNode(node.left) &&
+      isNode(node.right) &&
+      isBooleanExpression(node.left) &&
+      isBooleanExpression(node.right)
+    );
+  }
+  if (node.type === "CallExpression" && isNode(node.callee)) {
+    const propertyName = getMemberPropertyName(node.callee);
+    if (propertyName && BOOLEANISH_METHODS.has(propertyName)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const updateBehaviorFromCall = (flags: BehaviorFlags, propertyName: string): void => {
+  const operation = propertyName.toLowerCase();
+
+  if (DESTRUCTIVE_OPERATIONS.has(operation)) {
+    flags.hasDestructiveCall = true;
+    if (!flags.destructiveOperation) {
+      flags.destructiveOperation = operation;
+    }
+  }
+
+  const firstToken = getFirstNameToken(propertyName);
+  if (CREATE_OPERATIONS.has(operation) || Boolean(firstToken && CREATE_METHOD_FIRST.has(firstToken))) {
+    flags.hasCreateCall = true;
+  }
+};
+
+const collectBehaviorFlags = (bodyNode: unknown): BehaviorFlags => {
+  const flags: BehaviorFlags = {
     hasDestructiveCall: false,
-    destructiveOperation: null as string | null,
+    destructiveOperation: null,
     hasCreateCall: false,
     hasBooleanReturn: false,
     hasThrow: false,
@@ -62,28 +155,22 @@ const collectBehaviorFlags = (bodyNode: unknown): {
       flags.hasThrow = true;
     }
 
-    if (node.type === "ReturnStatement" && isNode(node.argument) && isBooleanExpression(node.argument)) {
-      flags.hasBooleanReturn = true;
+    if (node.type === "ReturnStatement" && node.argument != null) {
+      const unwrapped = unwrapExpression(node.argument);
+      if (unwrapped && isBooleanExpression(unwrapped)) {
+        flags.hasBooleanReturn = true;
+      }
     }
 
     if (node.type === "CallExpression" && isNode(node.callee)) {
-      const callee = node.callee;
-      if (callee.type === "MemberExpression" && isNode(callee.property) && callee.property.type === "Identifier") {
-        const operation = String(callee.property.name).toLowerCase();
-        if (DESTRUCTIVE_OPERATIONS.has(operation)) {
-          flags.hasDestructiveCall = true;
-          if (!flags.destructiveOperation) {
-            flags.destructiveOperation = operation;
-          }
-        }
-        if (CREATE_OPERATIONS.has(operation)) {
-          flags.hasCreateCall = true;
-        }
+      const propertyName = getMemberPropertyName(node.callee);
+      if (propertyName) {
+        updateBehaviorFromCall(flags, propertyName);
       }
     }
 
     for (const [key, value] of Object.entries(node)) {
-      if (key === "parent" || key === "loc" || key === "range") {
+      if (AST_KEYS_TO_SKIP.has(key)) {
         continue;
       }
       if (Array.isArray(value)) {
@@ -119,20 +206,14 @@ const rule = {
   create(context: {
     report: (descriptor: {
       node: unknown;
-      messageId: "destructiveMismatch" | "missingCreateBehavior" | "invalidValidateBehavior";
+      messageId: MessageId;
       data: { name: string; operation?: string };
     }) => void;
   }) {
     const reportSemanticMismatch = (
       node: unknown,
       name: string,
-      behavior: {
-        hasDestructiveCall: boolean;
-        destructiveOperation: string | null;
-        hasCreateCall: boolean;
-        hasBooleanReturn: boolean;
-        hasThrow: boolean;
-      },
+      behavior: BehaviorFlags,
     ): void => {
       if (startsWithIntent(name, READ_INTENT_PREFIXES) && behavior.hasDestructiveCall) {
         context.report({
