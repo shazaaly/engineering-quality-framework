@@ -6,7 +6,7 @@
 import { Injectable } from "@nestjs/common";
 
 @Injectable()
-export class UsersServiceViolations {
+export class UsersService {
   private readonly userRepo = {
     delete(targetId: string) {
       return { id: targetId, deleted: true };
