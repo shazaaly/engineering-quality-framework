@@ -13,6 +13,31 @@ This project demonstrates a practical quality-gate system that enforces naming, 
 - `scripts/generate-docs.mjs`: docs generator (Compodoc + handbook copy)
 - `scaffold/`: copy-ready templates for adopting this in another repo
 
+## Tools Used in Engineering Quality Framework
+
+| Tool | Purpose | Implementation |
+|------|---------|----------------|
+| **Compodoc** | Generates API documentation from TSDoc in Nest-style TypeScript | Invoked from `scripts/generate-docs.mjs` against `test-repo/tsconfig.docs.json`; output under `docs/api/` |
+| **ESLint** | Core lint engine for custom governance rules | Flat config in `eslint.config.js`; rules in `eslint-plugin/rules/` |
+| **Husky** | Git hooks so quality runs before commit | Template in `scaffold/.husky/pre-commit` (copy into target repos) |
+| **lint-staged** | Lint only staged files for fast pre-commit | Template in `scaffold/.lintstagedrc.json` |
+| **GitHub Actions** | CI quality gates and docs artifact on PR / `main` | `.github/workflows/quality-gate.yml` |
+| **TypeScript + @typescript-eslint/parser** | Parse TS/decorators so rules can inspect the AST | Wired in `eslint.config.js`; rules traverse ESTree nodes |
+| **marked** | Render the engineering handbook as HTML for docs | Used in `scripts/generate-docs.mjs` → `docs/engineering-handbook.html` |
+
+### Notes
+
+- `plan.md` mentions **ts-morph** for deeper AST work in a later phase; the **current** custom rules use the ESLint TypeScript AST only (no ts-morph dependency in rules today).
+- Local hooks (Husky + lint-staged) catch issues early; CI (GitHub Actions) is the non-bypassable gate when branch protection is enabled.
+- Meaningful Compodoc output depends on TSDoc; that expectation is aligned with `standards/engineering-handbook.md`.
+- Adoption templates live under `scaffold/`; see `EXTERNAL_REPO_ADOPTION_GUIDE.md` for copying into another repo.
+
+### Further reading (in this repo)
+
+- [plan.md](plan.md) — original scope and phases
+- [standards/engineering-handbook.md](standards/engineering-handbook.md) — policy source
+- [EXTERNAL_REPO_ADOPTION_GUIDE.md](EXTERNAL_REPO_ADOPTION_GUIDE.md) — external repo setup steps
+
 ## Current Rule Set
 
 The flat ESLint config at `eslint.config.js` enables these rules on `test-repo/src/**/*.ts`:
