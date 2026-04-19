@@ -27,20 +27,18 @@ This project demonstrates a practical quality-gate system that enforces naming, 
 
 ### Notes
 
-- `plan.md` mentions **ts-morph** for deeper AST work in a later phase; the **current** custom rules use the ESLint TypeScript AST only (no ts-morph dependency in rules today).
 - Local hooks (Husky + lint-staged) catch issues early; CI (GitHub Actions) is the non-bypassable gate when branch protection is enabled.
 - Meaningful Compodoc output depends on TSDoc; that expectation is aligned with `standards/engineering-handbook.md`.
 - Adoption templates live under `scaffold/`; see `EXTERNAL_REPO_ADOPTION_GUIDE.md` for copying into another repo.
 
 ### Further reading (in this repo)
 
-- [plan.md](plan.md) — original scope and phases
 - [standards/engineering-handbook.md](standards/engineering-handbook.md) — policy source
 - [EXTERNAL_REPO_ADOPTION_GUIDE.md](EXTERNAL_REPO_ADOPTION_GUIDE.md) — external repo setup steps
 
 ## Current Rule Set
 
-The flat ESLint config at `eslint.config.js` enables these rules on `test-repo/src/**/*.ts`:
+The flat ESLint config at `eslint.config.js` enables these rules on `test-repo/src/**/*.ts`. For a **per-rule case matrix** (forbidden names, semantic prefixes, DTO paths, TSDoc thresholds), see [demo.md](demo.md#cases-covered-by-governance-rules).
 
 1. `no-generic-names`
    - blocks vague identifiers like `data`, `temp`, `result`

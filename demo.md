@@ -1,6 +1,6 @@
 # Engineering Quality Framework — Demo Narrative
 
-This document explains **what problem the demo solves**, **which ideas shaped the solution**, **how the end-to-end pipeline fits together**, and **which tools implement each part**. For commands and file paths, see [README.md](README.md).
+This document explains **what problem the demo solves**, **which ideas shaped the solution**, **which cases each governance rule covers**, **how the end-to-end pipeline fits together**, and **which tools implement each part**. For commands and file paths, see [README.md](README.md).
 
 ---
 
@@ -28,6 +28,45 @@ The `test-repo/` directory is a governed sample application; the real product is
 | **Docs tied to quality** | Compodoc consumes TSDoc; the `require-tsdoc` rule pushes teams toward docs that Compodoc can actually render. |
 | **Traceable artifact** | After `quality` succeeds, CI runs `docs:generate` and uploads `governed-nest-docs` so every green run has a matching handbook + API HTML bundle. |
 | **Adoption via scaffold** | `scaffold/` holds Husky, lint-staged, and hook templates so another repo can adopt the same shape without reverse-engineering this tree. |
+
+---
+
+## Cases covered by governance rules
+
+Rules are registered in `eslint.config.js` for `test-repo/src/**/*.ts`. Below is what each rule actually checks (aligned with `eslint-plugin/rules/*.ts`).
+
+### `no-generic-names`
+
+| Case | Detail |
+|------|--------|
+| Forbidden identifiers | Variable, function, method, and parameter names in the set: `data`, `temp`, `tmp`, `info`, `result`, `results`, `stuff`, `item`, `obj`, `val`, `value`, `payload` (case-insensitive for the name check). |
+| Weak one-word method/function names | Top-level verb token only: `do`, `handle`, `process`, `run`, `manage` with **no** following token (for example `process` is flagged; `processUser` is allowed). |
+
+### `semantic-mismatch`
+
+| Case | Detail |
+|------|--------|
+| Read intent vs destructive behavior | Method name’s first token is `get`, `find`, `fetch`, or `read`, but the body contains a call whose member is `delete`, `remove`, `drop`, or `archive`. |
+| Create intent without create-like calls | First token is `create` or `add`, but the body has no detected `create` / `save` / `insert` call, nor a callee property starting with `create` or `add` (so simple delegation to `createX` still counts as create behavior). |
+| Validate intent without validation signal | First token is `validate` or `check`, but the body has neither a boolean-style return (`boolean` literal, binary/logical/conditional/unary `!`/`!!`) nor a `throw`. |
+
+### `nest-naming-conventions`
+
+| Case | Detail |
+|------|--------|
+| `@Controller` class suffix | Class name must end with `Controller`. |
+| `@Injectable` class suffix | Class name must end with `Service`. |
+| DTO file naming | If the file path matches `**/dto/**/*.ts` or `*.dto.ts`, every `class` declaration must end with `Dto`. |
+
+### `require-tsdoc`
+
+| Case | Detail |
+|------|--------|
+| Scope | Only **instance methods** on classes decorated with `@Controller` or `@Injectable`. Constructors, `private` methods, and `#private` methods are skipped. |
+| Missing block comment | No leading JSDoc-style block (`/** ... */`) immediately before the method. ESLint `--fix` inserts a template with summary, `@param` per AST parameter, and `@returns`. |
+| Summary too short | Text before the first `@tag` must be at least **10** characters. |
+| Missing or thin `@returns` / `@return` | Tag must exist; description after the tag must be at least **4** characters. |
+| `@param` alignment | Count, order, and names of `@param` lines must match the method’s parameters (including `TSParameterProperty` and common patterns like defaults and rest). Each `@param` description must be at least **4** characters. |
 
 ---
 
