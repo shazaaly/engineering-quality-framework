@@ -1,19 +1,20 @@
 // /**
 //  * Intentionally bad examples for lint demo.
 //  * Excluded from Compodoc so generated API docs stay clean.
+// git commit -m "bypass local checks" --no-verify
 //  */
-// import { Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
-// @Injectable()
-// export class UsersServiceViolations {
-//   private readonly userRepo = {
-//     delete(targetId: string) {
-//       return { id: targetId, deleted: true };
-//     },
-//     find(targetId: string) {
-//       return { id: targetId, email: "demo@example.com" };
-//     },
-//   };
+@Injectable()
+export class UsersServiceViolations {
+  private readonly userRepo = {
+    delete(targetId: string) {
+      return { id: targetId, deleted: true };
+    },
+    find(targetId: string) {
+      return { id: targetId, email: "demo@example.com" };
+    },
+  };
 
 //   // Intentionally bad demo case: weak verb + missing TSDoc.
 //   process() {
@@ -40,4 +41,4 @@
 //     const result = data.trim();
 //     return result;
 //   }
-// }
+}
