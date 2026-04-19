@@ -26,10 +26,6 @@ const isBooleanExpression = (node: { type: string; [key: string]: unknown }): bo
     return true;
   }
 
-  if (node.type === "BinaryExpression" || node.type === "LogicalExpression" || node.type === "ConditionalExpression") {
-    return true;
-  }
-
   if (node.type === "UnaryExpression" && (node.operator === "!" || node.operator === "!!")) {
     return true;
   }
@@ -80,10 +76,7 @@ const collectBehaviorFlags = (bodyNode: unknown): {
             flags.destructiveOperation = operation;
           }
         }
-        if (
-          CREATE_OPERATIONS.has(operation) ||
-          CREATE_INTENT_PREFIXES.some((prefix) => operation.startsWith(prefix))
-        ) {
+        if (CREATE_OPERATIONS.has(operation)) {
           flags.hasCreateCall = true;
         }
       }
